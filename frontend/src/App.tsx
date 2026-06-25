@@ -19,6 +19,8 @@ function App() {
   const [products, setProducts] = useState<Product[]>([])
   const [selectedSku, setSelectedSku] = useState<string | null>(null)
   const [movements, setMovements] = useState<Event[]>([])
+  const [page, setPage] = useState<number>(1)
+  const limit = 50
 
   useEffect(() => {
     fetch('http://localhost:8080/api/products')
@@ -29,14 +31,21 @@ function App() {
 
   useEffect(() => {
     if (selectedSku) {
-      fetch(`http://localhost:8080/api/products/${selectedSku}/movements`)
+      fetch(`http://localhost:8080/api/products/${selectedSku}/movements?page=${page}&limit=${limit}`)
         .then(res => res.json())
         .then(data => setMovements(data || []))
         .catch(err => console.error("Error fetching movements:", err))
     } else {
       setMovements([])
     }
-  }, [selectedSku])
+  }, [selectedSku, page])
+
+  const handleSelectProduct = (sku: string) => {
+    if (sku !== selectedSku) {
+      setSelectedSku(sku)
+      setPage(1)
+    }
+  }
 
   return (
     <div className="container">
@@ -47,7 +56,7 @@ function App() {
             <li 
               key={p.sku} 
               className={selectedSku === p.sku ? 'selected' : ''}
-              onClick={() => setSelectedSku(p.sku)}
+              onClick={() => handleSelectProduct(p.sku)}
             >
               <div className="product-info">
                 <strong>{p.name}</strong> <span className="sku">{p.sku}</span>
@@ -62,32 +71,49 @@ function App() {
         {!selectedSku ? (
           <p>Select a product to view its movements.</p>
         ) : (
-          <div className="table-container">
-            <table>
-              <thead>
-                <tr>
-                  <th>Event ID</th>
-                  <th>Type</th>
-                  <th>Quantity</th>
-                  <th>Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                {movements.map(m => (
-                  <tr key={m.event_id}>
-                    <td>{m.event_id}</td>
-                    <td className={m.type === 'IN' ? 'text-green' : 'text-red'}>{m.type}</td>
-                    <td>{m.quantity}</td>
-                    <td>{new Date(m.occurred_at).toLocaleString()}</td>
-                  </tr>
-                ))}
-                {movements.length === 0 && (
+          <div>
+            <div className="table-container">
+              <table>
+                <thead>
                   <tr>
-                    <td colSpan={4} className="text-center">No movements found.</td>
+                    <th>Event ID</th>
+                    <th>Type</th>
+                    <th>Quantity</th>
+                    <th>Date</th>
                   </tr>
-                )}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {movements.map(m => (
+                    <tr key={m.event_id}>
+                      <td>{m.event_id}</td>
+                      <td className={m.type === 'IN' ? 'text-green' : 'text-red'}>{m.type}</td>
+                      <td>{m.quantity}</td>
+                      <td>{new Date(m.occurred_at).toLocaleString()}</td>
+                    </tr>
+                  ))}
+                  {movements.length === 0 && (
+                    <tr>
+                      <td colSpan={4} className="text-center">No movements found.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+            <div className="pagination">
+              <button 
+                onClick={() => setPage(p => Math.max(1, p - 1))} 
+                disabled={page === 1}
+              >
+                Previous
+              </button>
+              <span className="page-info">Page {page}</span>
+              <button 
+                onClick={() => setPage(p => p + 1)} 
+                disabled={movements.length < limit}
+              >
+                Next
+              </button>
+            </div>
           </div>
         )}
       </div>
