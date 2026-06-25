@@ -19,7 +19,13 @@ concurrente, persistirlos de forma correcta y exponerlos a quien los consume.**
 Un evento tiene esta forma (una línea JSON por evento, formato NDJSON):
 
 ```json
-{"event_id":"evt-00000004","sku":"SKU-0003","type":"OUT","quantity":20,"occurred_at":"2026-06-01T02:12:46Z"}
+{
+  "event_id": "evt-00000004",
+  "sku": "SKU-0003",
+  "type": "OUT",
+  "quantity": 20,
+  "occurred_at": "2026-06-01T02:12:46Z"
+}
 ```
 
 - `event_id`: identificador único del evento en el origen.
@@ -176,3 +182,70 @@ los trade-offs y cómo extenderías la solución.
 
 Si tienes dudas sobre el enunciado, escribe a **ccromer@falabella.cl**. Preferimos
 que preguntes a que asumas.
+
+---
+
+# Project Documentation
+
+## 🚀 How to Run & Test
+
+Follow these steps to set up and run the project components locally:
+
+1. **Start the Database** Ensure your PostgreSQL instance is up and running using the provided configuration file:
+
+   ```bash
+   docker compose up -d
+   ```
+
+   - Database runs on `localhost:5432`.
+   - Run `docker compose down` to stop it.
+
+2. **Run the Ingestion Command**
+   The backend includes a CLI tool to process event files. You can scale the dataset size and file count for testing:
+
+   ```bash
+   # Generate small dataset for testing
+   go run ./tools/gen
+
+   # Generate a larger dataset (example: 2M events in 20 files)
+   go run ./tools/gen -n 2000000 -files 20
+
+   # Run the ingestion process (reads from data/events/)
+   go run ./cmd/api
+   ```
+
+   - The ingestion process runs with a fixed pool of 5 workers to respect the DB connection limit of 10.
+   - It handles cancellation gracefully (e.g., on `SIGINT`).
+
+3. **Start the Frontend**
+   ```bash
+   cd frontend
+   npm install
+   npm run dev
+   ```
+
+   - The frontend runs on `http://localhost:5173` (by default).
+   - It communicates with the Go backend running on port `8080`.
+
+## 🔧 Architecture Overview
+
+The system is composed of three main parts:
+
+1.  **Go Backend**:
+    - Reads NDJSON event files from `data/events/`.
+    - Processes events concurrently using a pool of 5 workers.
+    - Persists events to PostgreSQL, maintaining atomic stock updates via CTEs.
+    - Exposes two REST endpoints:
+      - `GET /api/products`: Returns current stock for all products.
+      - `GET /api/products/{sku}/history`: Returns the ordered history of movements for a specific SKU.
+    - Handles graceful shutdown on interruption signals.
+
+2.  **PostgreSQL Database**:
+    - Contains `products` (sku, name) and `movements` (event_id, sku, type, quantity, occurred_at).
+    - Uses `event_id` as the primary key to ensure at-least-once processing idempotency.
+    - Includes an index on `(sku, occurred_at DESC)` for fast history retrieval.
+
+3.  **React Frontend**:
+    - Displays a list of products with their current stock.
+    - Shows the movement history for a selected product.
+    - Built with Vite and TypeScript, focusing on clean API integration and modern React practices.
