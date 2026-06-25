@@ -1,10 +1,11 @@
 package main
 
 import (
-	"encoding/json"
 	"log"
 	"net/http"
 	"strconv"
+
+	"github.com/gin-gonic/gin"
 
 	"takehome/internal/db"
 	"takehome/internal/models"
@@ -17,105 +18,88 @@ func main() {
 	}
 	defer conn.Close()
 
-	http.HandleFunc("/api/products", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		if r.Method != http.MethodGet {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	r := gin.Default()
+
+	// CORS middleware
+	r.Use(func(c *gin.Context) {
+		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET")
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
 			return
 		}
-
-		rows, err := conn.Query("SELECT sku, name, current_stock FROM products ORDER BY sku")
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		defer rows.Close()
-
-		var products []models.Product
-		for rows.Next() {
-			var p models.Product
-			if err := rows.Scan(&p.SKU, &p.Name, &p.CurrentStock); err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-			products = append(products, p)
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(products)
+		c.Next()
 	})
 
-	http.HandleFunc("/api/products/", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		if r.Method != http.MethodGet {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-
-		// Parse SKU from path: /api/products/{sku}/movements
-		path := r.URL.Path
-		const prefix = "/api/products/"
-		if len(path) <= len(prefix) {
-			http.Error(w, "Not found", http.StatusNotFound)
-			return
-		}
-
-		rest := path[len(prefix):]
-		// rest should be "{sku}/movements"
-		var sku string
-		for i, c := range rest {
-			if c == '/' {
-				sku = rest[:i]
-				rest = rest[i:]
-				break
-			}
-		}
-
-		if sku == "" || rest != "/movements" {
-			http.Error(w, "Not found", http.StatusNotFound)
-			return
-		}
-
-		pageStr := r.URL.Query().Get("page")
-		page := 1
-		if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
-			page = p
-		}
-		
-		limitStr := r.URL.Query().Get("limit")
-		limit := 100
-		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 && l <= 1000 {
-			limit = l
-		}
-		
-		offset := (page - 1) * limit
-
-		rows, err := conn.Query("SELECT event_id, sku, type, quantity, occurred_at FROM movements WHERE sku = $1 ORDER BY occurred_at DESC LIMIT $2 OFFSET $3", sku, limit, offset)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		defer rows.Close()
-
-		var events []models.Event
-		for rows.Next() {
-			var e models.Event
-			if err := rows.Scan(&e.EventID, &e.SKU, &e.Type, &e.Quantity, &e.OccurredAt); err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
+	api := r.Group("/api")
+	{
+		api.GET("/products", func(c *gin.Context) {
+			rows, err := conn.Query("SELECT sku, name, current_stock FROM products ORDER BY sku")
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				return
 			}
-			events = append(events, e)
-		}
-		if events == nil {
-			events = []models.Event{}
-		}
+			defer rows.Close()
 
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(events)
-	})
+			var products []models.Product
+			for rows.Next() {
+				var p models.Product
+				if err := rows.Scan(&p.SKU, &p.Name, &p.CurrentStock); err != nil {
+					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+					return
+				}
+				products = append(products, p)
+			}
+			if products == nil {
+				products = []models.Product{}
+			}
+
+			c.JSON(http.StatusOK, products)
+		})
+
+		api.GET("/products/:sku/movements", func(c *gin.Context) {
+			sku := c.Param("sku")
+
+			pageStr := c.DefaultQuery("page", "1")
+			page, err := strconv.Atoi(pageStr)
+			if err != nil || page < 1 {
+				page = 1
+			}
+
+			limitStr := c.DefaultQuery("limit", "100")
+			limit, err := strconv.Atoi(limitStr)
+			if err != nil || limit < 1 || limit > 1000 {
+				limit = 100
+			}
+
+			offset := (page - 1) * limit
+
+			rows, err := conn.Query("SELECT event_id, sku, type, quantity, occurred_at FROM movements WHERE sku = $1 ORDER BY occurred_at DESC LIMIT $2 OFFSET $3", sku, limit, offset)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+			defer rows.Close()
+
+			var events []models.Event
+			for rows.Next() {
+				var e models.Event
+				if err := rows.Scan(&e.EventID, &e.SKU, &e.Type, &e.Quantity, &e.OccurredAt); err != nil {
+					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+					return
+				}
+				events = append(events, e)
+			}
+			if events == nil {
+				events = []models.Event{}
+			}
+
+			c.JSON(http.StatusOK, events)
+		})
+	}
 
 	log.Println("API listening on :8080")
-	if err := http.ListenAndServe(":8080", nil); err != nil {
+	if err := r.Run(":8080"); err != nil {
 		log.Fatal(err)
 	}
 }
