@@ -50,6 +50,9 @@ function App() {
   return (
     <div className="container">
       <div className="sidebar">
+        <div className="logo-container">
+          <img src="/Falabella.svg.png" alt="Falabella Logo" className="logo" />
+        </div>
         <h2>Products</h2>
         <ul className="product-list">
           {products.map(p => (
