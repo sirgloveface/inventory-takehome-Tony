@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strconv"
 
 	"takehome/internal/db"
 	"takehome/internal/models"
@@ -75,10 +76,21 @@ func main() {
 			return
 		}
 
-		// For pagination, we could use limit/offset, but let's just return top 100 for simplicity and UI performance,
-		// or allow a limit query parameter. The spec says "The query has to keep responding well to this volume."
-		// Returning all millions of rows to the frontend is not viable. Let's limit to 100.
-		rows, err := conn.Query("SELECT event_id, sku, type, quantity, occurred_at FROM movements WHERE sku = $1 ORDER BY occurred_at DESC LIMIT 100", sku)
+		pageStr := r.URL.Query().Get("page")
+		page := 1
+		if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
+			page = p
+		}
+		
+		limitStr := r.URL.Query().Get("limit")
+		limit := 100
+		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 && l <= 1000 {
+			limit = l
+		}
+		
+		offset := (page - 1) * limit
+
+		rows, err := conn.Query("SELECT event_id, sku, type, quantity, occurred_at FROM movements WHERE sku = $1 ORDER BY occurred_at DESC LIMIT $2 OFFSET $3", sku, limit, offset)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
