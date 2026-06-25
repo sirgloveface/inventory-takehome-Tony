@@ -27,6 +27,18 @@ body {
   padding: 1rem;
 }
 
+.logo-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.logo {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+}
+
 .content {
   flex: 1;
   padding: 2rem;
