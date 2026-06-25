@@ -1,33 +1,27 @@
-## Inventory-takehome-Tony PR: [Título Breve del Cambio]
+## Inventory-takehome-Tony PR: [Brief Title of the Change]
 
-### 📝 Descripción
+### 📝 Description
 
-<!-- Describe brevemente qué hace este cambio y por qué es necesario. -->
+- **Type of Change:** 🚀 Feature / 🐛 Bugfix / 🧹 Refactor / 🔧 DevOps
+- **Ticket / Context:** (Optional: Link to the task or description of the issue)
 
-- **Tipo de cambio:** 🚀 Feature / 🐛 Bugfix / 🧹 Refactor / 🔧 DevOps
-- **Ticket/Contexto:** (Opcional: Link a la tarea o descripción del problema)
+### 🛠️ Changes Made
 
-### 🛠️ Cambios Realizados
+- [ ] **Domain:** Modifications to business logic or use cases.
+- [ ] **Infrastructure:** Changes to adapters, database (Supabase), or AWS components.
+- [ ] **API:** New endpoints or updates to the WhatsApp contract/payload.
 
-- [ ] **Domain:** Modificación en lógica de negocio o casos de uso.
-- [ ] **Infrastructure:** Cambios en adaptadores, base de datos (Supabase) o AWS.
-- [ ] **API:** Nuevos endpoints o cambios en el contrato de WhatsApp.
+### 🧪 Quality Checklist (Senior Level)
 
-### 🧪 Checklist de Calidad (Senior Level)
+- [ ] **Build:** The project builds successfully locally (`npm run build`).
+- [ ] **Node.js:** Compatibility with Node.js 22.x is maintained.
+- [ ] **Logging:** `LoggerPort` has been implemented for proper CloudWatch traceability.
+- [ ] **Security:** No secrets or keys are hardcoded (environment variables are used properly).
+- [ ] **Idempotency:** If this is a scheduling/booking process, has duplication prevention been verified?
 
-- [ ] **Build:** El proyecto compila correctamente localmente (`npm run build`).
-- [ ] **Node.js:** Se mantiene la compatibilidad con Node.js 22.x.
-- [ ] **Logs:** Se incluyeron `LoggerPort` para trazabilidad en CloudWatch.
-- [ ] **Security:** No se incluyeron secretos/keys en el código (se usan variables de entorno).
-- [ ] **Idempotencia:** Si es un proceso de agendamiento, ¿se verificó que no duplique registros?
+### 📸 Testing / Evidence
 
-### 📸 Pruebas / Evidencia
+- **Tested URL:** `https://.../prod/health` or `/webhook`
+- **Expected Outcome:**
 
-<!-- Captura de pantalla de los logs de CloudWatch o respuesta del endpoint /health -->
-
-- **URL Probada:** `https://.../prod/health` o `/webhook`
-- **Resultado esperado:**
-
-### ⚠️ Notas Adicionales
-
-<!-- ¿Hay alguna migración de SQL en Supabase necesaria antes de mergear? -->
+### ⚠️ Additional Notes
