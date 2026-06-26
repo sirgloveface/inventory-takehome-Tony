@@ -154,3 +154,59 @@ th {
 .page-info {
   font-weight: bold;
 }
+
+/* ── Date filters ── */
+.date-filters {
+  display: flex;
+  align-items: flex-end;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.filter-group label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.filter-group input[type="date"] {
+  padding: 0.45rem 0.75rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  color: #333;
+  background: #fff;
+  transition: border-color 0.2s;
+}
+
+.filter-group input[type="date"]:focus {
+  outline: none;
+  border-color: #a0c0ff;
+  box-shadow: 0 0 0 2px rgba(160, 192, 255, 0.3);
+}
+
+.clear-btn {
+  padding: 0.45rem 1rem;
+  background-color: #fff;
+  border: 1px solid #dc3545;
+  color: #dc3545;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.clear-btn:hover {
+  background-color: #dc3545;
+  color: #fff;
+}
