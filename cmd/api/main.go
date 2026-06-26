@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -81,16 +82,35 @@ func main() {
 		if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
 			page = p
 		}
-		
+
 		limitStr := r.URL.Query().Get("limit")
 		limit := 100
 		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 && l <= 1000 {
 			limit = l
 		}
-		
+
 		offset := (page - 1) * limit
 
-		rows, err := conn.Query("SELECT event_id, sku, type, quantity, occurred_at FROM movements WHERE sku = $1 ORDER BY occurred_at DESC LIMIT $2 OFFSET $3", sku, limit, offset)
+		// Build dynamic query with optional date range filters
+		query := "SELECT event_id, sku, type, quantity, occurred_at FROM movements WHERE sku = $1"
+		args := []any{sku}
+		argIdx := 2
+
+		if from := r.URL.Query().Get("from"); from != "" {
+			query += fmt.Sprintf(" AND occurred_at >= $%d", argIdx)
+			args = append(args, from)
+			argIdx++
+		}
+		if to := r.URL.Query().Get("to"); to != "" {
+			query += fmt.Sprintf(" AND occurred_at <= $%d", argIdx)
+			args = append(args, to)
+			argIdx++
+		}
+
+		query += fmt.Sprintf(" ORDER BY occurred_at DESC LIMIT $%d OFFSET $%d", argIdx, argIdx+1)
+		args = append(args, limit, offset)
+
+		rows, err := conn.Query(query, args...)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return

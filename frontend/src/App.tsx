@@ -20,6 +20,8 @@ function App() {
   const [selectedSku, setSelectedSku] = useState<string | null>(null)
   const [movements, setMovements] = useState<Event[]>([])
   const [page, setPage] = useState<number>(1)
+  const [fromDate, setFromDate] = useState<string>('')
+  const [toDate, setToDate] = useState<string>('')
   const limit = 50
 
   useEffect(() => {
@@ -31,20 +33,33 @@ function App() {
 
   useEffect(() => {
     if (selectedSku) {
-      fetch(`http://localhost:8080/api/products/${selectedSku}/movements?page=${page}&limit=${limit}`)
+      const params = new URLSearchParams({
+        page: String(page),
+        limit: String(limit),
+      })
+      if (fromDate) params.set('from', fromDate + 'T00:00:00Z')
+      if (toDate) params.set('to', toDate + 'T23:59:59Z')
+
+      fetch(`http://localhost:8080/api/products/${selectedSku}/movements?${params}`)
         .then(res => res.json())
         .then(data => setMovements(data || []))
         .catch(err => console.error("Error fetching movements:", err))
     } else {
       setMovements([])
     }
-  }, [selectedSku, page])
+  }, [selectedSku, page, fromDate, toDate])
 
   const handleSelectProduct = (sku: string) => {
     if (sku !== selectedSku) {
       setSelectedSku(sku)
       setPage(1)
     }
+  }
+
+  const handleClearFilters = () => {
+    setFromDate('')
+    setToDate('')
+    setPage(1)
   }
 
   return (
@@ -75,6 +90,32 @@ function App() {
           <p>Select a product to view its movements.</p>
         ) : (
           <div>
+            <div className="date-filters">
+              <div className="filter-group">
+                <label htmlFor="from-date">From</label>
+                <input
+                  id="from-date"
+                  type="date"
+                  value={fromDate}
+                  onChange={e => { setFromDate(e.target.value); setPage(1) }}
+                />
+              </div>
+              <div className="filter-group">
+                <label htmlFor="to-date">To</label>
+                <input
+                  id="to-date"
+                  type="date"
+                  value={toDate}
+                  onChange={e => { setToDate(e.target.value); setPage(1) }}
+                />
+              </div>
+              {(fromDate || toDate) && (
+                <button className="clear-btn" onClick={handleClearFilters}>
+                  Clear filters
+                </button>
+              )}
+            </div>
+
             <div className="table-container">
               <table>
                 <thead>
